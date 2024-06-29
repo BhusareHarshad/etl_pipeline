@@ -37,26 +37,11 @@ class Github(BaseCrawler):
                     with open(os.path.join(root, file), 'r', errors="ignore") as f:
                         tree[file_path] = f.read().replace(" ", "")    
             
-            try:
-                ##save it in db  
-                instance = self.model(
-                    name=repo_name, link=link, content=tree, owner_id="user"
-                )
-                
-                ##client creation and adding data
-                #TODO: Add in different util and db files 
-                client = MongoClient(settings.DATABASE_HOST)
-                
-                db = client["test1"]
-                collection = db[RepositoryDocument.Settings.name]
-
-                # Insert the document
-                collection.insert_one(instance.dict(by_alias=True))
-
-                print("Document inserted successfully!")
-            except Exception as e:
-                print(f"WARNING: Unable to insert in data in database: {e}")
-                pass
+            ##save it in db  
+            instance = self.model(
+                name=repo_name, link=link, content=tree
+            )
+            instance.save()
 
         except Exception:
             raise

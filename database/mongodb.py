@@ -16,15 +16,11 @@ class MongoDBConnector:
         
         return cls._instance
     
-    @classmethod
-    def get_database(cls, db_name):
-        return cls._instance[db_name]
-    
     def close(self):
         if self._instance:
             self._instance.close()
             print("Connection to database closed")
             
-connection = MongoDBConnector
+connection = MongoDBConnector()
         
         
