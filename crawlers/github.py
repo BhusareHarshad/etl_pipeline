@@ -1,58 +1,47 @@
-import tempfile
-import os
-import subprocess
-import shutil
-import os
-# import stat
+import tempfile, os
+import shutil, subprocess
+from crawlers.base import BaseCrawler
 
-# def handle_remove_readonly(func, path, exc_info):
-#     exc_type, exc_value, exc_traceback = exc_info
-#     if func in (os.remove, os.rmdir) and exc_type is PermissionError:
-#         os.chmod(path, stat.S_IWRITE)
-#         func(path)
-#     else:
-#         raise exc_value
-
-# def change_permissions_recursively(directory_path):
-#     for root, dirs, files in os.walk(directory_path):
-#         for dir_name in dirs:
-#             os.chmod(os.path.join(root, dir_name), stat.S_IWRITE)
-#         for file_name in files:
-#             os.chmod(os.path.join(root, file_name), stat.S_IWRITE)
-
-# def delete_directory(directory_path):
-#     try:
-#         change_permissions_recursively(directory_path)
-#         shutil.rmtree(directory_path, onerror=handle_remove_readonly)
-#         print(f"Successfully deleted {directory_path}")
-#     except PermissionError as e:
-#         print(f"PermissionError: {e}")
-#     except Exception as e:
-#         print(f"An error occurred: {e}")
-
-
-class Github():
-    def __init__(self, link):
-        self.link = link
+class Github(BaseCrawler):
+    def __init__(self, ignore = (".git", ".toml", ".lock", ".png", "node_modules", ".log", ".local")):
+        super().__init__()
+        self._ignore = ignore
         
-    def clone_repo(self):
-        #make a temp repo
+    def extract(self, link: str, **kwargs) -> None:
+        
+        #Make a temporary directory
         temp_dir = tempfile.mkdtemp()
-        print(temp_dir)
+        repo_name = link.rstrip("/").split("/")[-1]
         
-        os.chdir(temp_dir)
-        #clone the repo
-        subprocess.run(['git', 'clone', self.link])
+        try:
+            #change directory and clone repo
+            os.chdir(temp_dir)
+            subprocess.run(['git', 'clone', link])
+            
+            repo_path = os.path.join(temp_dir, os.listdir(temp_dir)[0])
+
+            tree = {}
+            for root, dirs, files in os.walk(repo_path):
+                dir = root.replace(repo_name, '').lstrip("/")
+                print(dir)
+                if dir.startswith(self._ignore):
+                    continue
+                
+                for file in files:
+                    if file.endswith(self._ignore):
+                        continue
+                    file_path = os.path.join(dir, file)
+                    with open(os.path.join(root, file), 'r', errors="ignore") as f:
+                        tree[file_path] = f.read().replace(" ", "")    
+            ##save it in db    
+
+        except Exception:
+            raise
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
         
-        #read and write in a variable and put it in database
-        
-        #os.remove(temp_dir)
-        os.chdir(os.getcwd())
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        #delete_directory(temp_dir)
-        #read and store it
         
 if __name__ == "__main__":
-    g = Github(r'https://github.com/BhusareHarshad/Chrome-Extension-v2.git')
-    g.clone_repo()
+    g = Github()
+    g.extract(r'https://github.com/BhusareHarshad/Chrome-Extension-v2.git')
 
